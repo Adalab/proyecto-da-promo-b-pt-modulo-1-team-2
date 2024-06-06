@@ -1,148 +1,8 @@
 import random #Importamos el módulo random
-from tkinter import * #importamos libreria Tkinter para la interfaz
+from tkinter import * #importamos libreria Tkinter para la interfaz, y messagebox para que muestre ventana emergente tras victoria o derrota
 from tkinter import messagebox
-import unicodedata
+import unicodedata # importamos libreria unicode data y re para poder cribar respuestas casi correctas, ejemplo, que falte alguna tilde
 import re
-
-class JuegoGeografía():
-    
-    def __init__(self,ventana,diccionario,aciertos=0,fallos=0,intentos=3,recuento=0):
-        self.ventana = ventana
-        self.aciertos = aciertos
-        self.fallos = fallos
-        self.intentos=intentos
-        self.recuento = recuento
-        self.diccionario = diccionario
-        
-        self.respuesta_usuario_entry = Entry(self.ventana,font=("Helvética", 20))
-        self.respuesta_usuario_entry.grid(row=2, column=0, padx= 60, pady= 30, sticky="w")
-        
-    
-    def instrucciones(self):
-        
-        texto = "¡Bienvenida a Preguntas y Respuestas de Geografía!\nTienes 3 intentos para responder cada pregunta correctamente.\nSi fallas 3 preguntas habrás perdido ¡Ten cuidado!\nSi aciertas 5 preguntas habrás ganado.\n!Mucha suerte! Empezamos"
-        self.ventana.title("Preguntas de Geografía")
-        self.ventana.geometry("1250x2000")
-        #self.ventana.iconbitmap("Globo_terraqueo.ico")
-        
-        intro = Label(self.ventana, text=texto, bg="black", fg="white",font=("Helvética",20))
-        intro.grid(row=0,column=0,padx=60, pady=30, sticky="nw")
-        
-        return texto
-    
-    def seleccion_pregunta(self):
-        self.intentos = 3
-        self.recuento += 1
-        self.pregunta = random.choice(list(self.diccionario)) #Generamos una lista con las claves 
-        #(preguntas) del diccionario y seleccionamos una de manera aleatoria. Lo 
-        #almacenamos en la variable 'pregunta'
-        
-        pregunta_label = Label(self.ventana, text= f"Pregunta nº {self.recuento} => {self.pregunta}                                                                     ")
-        pregunta_label.config(font=("Helvética",25), fg="darkblue")
-        pregunta_label.grid(row=1, column=0, padx=60,sticky="w")
-        return self.pregunta # Indicamos que lo que devuelve esta función es la variable pregunta
-    
-    def inicio_juego(self):
-        self.instrucciones()
-        
-        self.seleccion_pregunta() 
-        boton = Button(self.ventana, text = "Click Aquí", command=self.comprobacion_respuesta, height= 3, width=15)
-        boton.grid(row=3, column=0, padx=60, pady=20, sticky="w")
-        
-    def normalizar_texto(self,texto):
-        
-        # Normalizar unicode: 
-        # unicodedata.normalize('NFKD', texto): Esta función descompone los caracteres acentuados en su forma básica y su tilde separada. 
-        # Por ejemplo, 'á' se convierte en 'a' y un carácter de tilde separado.
-        # .encode('ascii', 'ignore').decode('utf-8'): Convierte la cadena a ASCII, ignorando los caracteres que no pueden ser convertidos 
-        # (como las tildes que se descompusieron anteriormente). Esto elimina las tildes y otros caracteres no ASCII.
-        # .lower(): Convierte toda la cadena a minúsculas, para que las comparaciones no sean sensibles a las mayúsculas y minúsculas.
-        texto_normalizado = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8').lower()
-        # Eliminación de caracteres no alfanuméricos:
-        # re.sub(r'[^a-z0-9\s]', '', texto_normalizado): Reemplaza cualquier carácter que no sea una letra (a-z), un número (0-9) o un espacio, 
-        # con una cadena vacía. Esto elimina caracteres especiales, puntuación, etc.
-        texto_normalizado = re.sub(r'[^a-z0-9\s]', '', texto_normalizado)
-        # Normalización de espacios:
-        # re.sub(r'\s+', ' ', texto_normalizado): Reemplaza uno o más espacios consecutivos por un solo espacio.
-        # .strip(): Elimina los espacios al principio y al final de la cadena.
-        texto_normalizado = re.sub(r'\s+', ' ', texto_normalizado).strip()
-        return texto_normalizado
-
-# Función para calcular la distancia de Levenshtein entre dos cadenas
-
-    def distancia_levenshtein(self,a, b):
-        if len(a) < len(b):
-            return self.distancia_levenshtein(b, a)
-
-        if len(b) == 0:
-            return len(a)
-
-        previous_row = range(len(b) + 1)
-        for i, c1 in enumerate(a):
-            current_row = [i + 1]
-            for j, c2 in enumerate(b):
-                insertions = previous_row[j + 1] + 1
-                deletions = current_row[j] + 1
-                substitutions = previous_row[j] + (c1 != c2)
-                current_row.append(min(insertions, deletions, substitutions))
-            previous_row = current_row
-
-        return previous_row[-1]
-
-        # Función para comparar respuestas con tolerancia a errores ortográficos
-    def es_respuesta_correcta(self, umbral_similitud=0.8):
-        respuesta_usuario = self.respuesta_usuario_entry.get()
-        respuesta_usuario = self.normalizar_texto(respuesta_usuario)
-        
-        respuesta_correcta = self.diccionario[self.pregunta]
-        respuesta_correcta = self.normalizar_texto(respuesta_correcta)
-        
-        longitud_maxima = max(len(respuesta_usuario), len(respuesta_correcta))
-        distancia = self.distancia_levenshtein(respuesta_usuario, respuesta_correcta)
-        similitud = (longitud_maxima - distancia) / longitud_maxima
-        return similitud >= umbral_similitud
-        
-    def comprobacion_respuesta(self):
-        self.es_respuesta_correcta()
-        respuesta_usuario = self.respuesta_usuario_entry.get()
-        print(respuesta_usuario)
-        
-        
-        if self.es_respuesta_correcta():
-            self.aciertos += 1
-            acierto_label = Label(self.ventana, text = f"¡Acertaste!, llevas {self.aciertos} respuestas correctas",font=("Helvética",20))
-            acierto_label.grid(row=4, column=0, padx= 60, pady=30,sticky="w")
-            self.seleccion_pregunta()
-            
-            if self.aciertos == 5: #Si llegamos a 5 respuestas correctas imprimimos has ganado
-                victoria_label = Label(self.ventana, text=f"¡HAS GANADO!",bg="white", fg="green", font=("Helvética", 60))
-                victoria_label.grid(row=5,column=0, padx=60, pady=30, sticky="w")
-                messagebox.showinfo("¡Ganaste!", "Enhorabuena! Has ganado el juego!")
-                self.ventana.destroy()
-        else:
-            self.intentos -= 1 #Actualizamos el número de intentos restantes quitando 1
-
-            if self.intentos > 0: #Si aun nos quedan intentos
-                fallaste_label = Label(self.ventana, text=(f"¡Fallaste! ahora te quedan => {self.intentos} intentos   "),font=("Helvética",20))
-                fallaste_label.grid(row=4,column=0,padx=60, pady=30,sticky="w")
-            else: 
-                self.fallos += 1
-                
-                if self.fallos == 3:
-                    derrota_label = Label(self.ventana, text=f"¡HAS PERDIDO!", bg="white", fg="red", font=("Helvética", 60))
-                    derrota_label.grid(row=4, column=0, padx=60, pady=30, sticky="w")
-                    messagebox.showinfo("¡Has perdido!", "vuelve a intentarlo")
-                    self.ventana.destroy()
-                    
-                    
-                else:
-                    fallos_label = Label(self.ventana, text = f"Ya no te quedan intentos, llevas {self.fallos} fallos",font=("Helvética",20))
-                    fallos_label.grid(row=4, column = 0, padx=60, pady=30,sticky="w")
-                    self.seleccion_pregunta()
-
-
-              
-
 
 diccionario_preguntas = {
     "¿Cuál es el río más largo de la Península Ibérica?": "Tajo",
@@ -303,6 +163,174 @@ diccionario_preguntas = {
     "¿Cuál es el cabo situado en la punta sur de la península de Baja California en México?": "Cabo San Lucas",
     "¿Qué estrecho separa Grecia de Turquía?": "Estrecho de Dardanelos"
 }
+
+class JuegoGeografía():
+    
+    def __init__(self,ventana,diccionario,aciertos=0,fallos=0,intentos=3,recuento=0): # metodo constructor de la clase, con sus atributos
+        self.ventana = ventana # self.ventana lo necesitaremos para iniciar la ventana que se mantendrá abierta mientras dure el juego
+        self.aciertos = aciertos
+        self.fallos = fallos
+        self.intentos=intentos
+        self.recuento = recuento
+        self.diccionario = diccionario
+        
+        self.respuesta_usuario_entry = Entry(self.ventana,font=("Helvética", 20)) # incorporamos en la interfaz caja para que el jugador introduzca la respuesta
+        self.respuesta_usuario_entry.grid(row=2, column=0, padx= 60, pady= 30, sticky="w") 
+        
+    
+    def instrucciones(self):
+        
+        texto = "¡Bienvenida a Preguntas y Respuestas de Geografía!\nTienes 3 intentos para responder cada pregunta correctamente.\nSi fallas 3 preguntas habrás perdido ¡Ten cuidado!\nSi aciertas 5 preguntas habrás ganado.\n!Mucha suerte! Empezamos"
+        self.ventana.title("Preguntas de Geografía")
+        self.ventana.geometry("1250x2000")
+        #self.ventana.iconbitmap("Globo_terraqueo.ico")
+        
+        intro = Label(self.ventana, text=texto, bg="black", fg="white",font=("Helvética",20)) # etiqueta con el texto que muestra informacion al usuario
+        intro.grid(row=0,column=0,padx=60, pady=30, sticky="nw")
+        
+        return texto
+    
+    def seleccion_pregunta(self):
+        self.intentos = 3
+        self.recuento += 1
+        self.pregunta = random.choice(list(self.diccionario)) #Generamos una lista con las claves 
+        #(preguntas) del diccionario y seleccionamos una de manera aleatoria. Lo 
+        #almacenamos en la variable 'pregunta'
+        
+        pregunta_label = Label(self.ventana, text= f"Pregunta nº {self.recuento} => {self.pregunta}                                                                     ")
+        pregunta_label.config(font=("Helvética",25), fg="darkblue") # etiqueta mostrando la pregunta seleccionada en la interfaz
+        pregunta_label.grid(row=1, column=0, padx=60,sticky="w") # con grid podemos elegir donde posicionar los diferentes widgets que vamos incorporando a la interfaz
+        return self.pregunta # Indicamos que lo que devuelve esta función es la variable pregunta
+    
+    def inicio_juego(self):
+        self.instrucciones()
+        
+        self.seleccion_pregunta() 
+        boton = Button(self.ventana, text = "Click Aquí", command=self.comprobacion_respuesta, height= 3, width=15) 
+        # generamos boton que una vez accionado por el jugador inicia el metodo comprobacion_respuesta
+        boton.grid(row=3, column=0, padx=60, pady=20, sticky="w")
+        
+    def normalizar_texto(self,texto):
+        
+        # Normalizar unicode: 
+        # unicodedata.normalize('NFKD', texto): Esta función descompone los caracteres acentuados en su forma básica y su tilde separada. 
+        # Por ejemplo, 'á' se convierte en 'a' y un carácter de tilde separado.
+        # .encode('ascii', 'ignore').decode('utf-8'): Convierte la cadena a ASCII, ignorando los caracteres que no pueden ser convertidos 
+        # (como las tildes que se descompusieron anteriormente). Esto elimina las tildes y otros caracteres no ASCII.
+        # .lower(): Convierte toda la cadena a minúsculas, para que las comparaciones no sean sensibles a las mayúsculas y minúsculas.
+        texto_normalizado = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8').lower()
+        # Eliminación de caracteres no alfanuméricos:
+        # re.sub(r'[^a-z0-9\s]', '', texto_normalizado): Reemplaza cualquier carácter que no sea una letra (a-z), un número (0-9) o un espacio, 
+        # con una cadena vacía. Esto elimina caracteres especiales, puntuación, etc.
+        texto_normalizado = re.sub(r'[^a-z0-9\s]', '', texto_normalizado)
+        # Normalización de espacios:
+        # re.sub(r'\s+', ' ', texto_normalizado): Reemplaza uno o más espacios consecutivos por un solo espacio.
+        # .strip(): Elimina los espacios al principio y al final de la cadena.
+        texto_normalizado = re.sub(r'\s+', ' ', texto_normalizado).strip()
+        return texto_normalizado
+
+# Función para calcular la distancia de Levenshtein entre dos cadenas a y b
+# la distancia es el número mínimo de operaciones neceasrias para transformar una cadena en otra.
+
+    def distancia_levenshtein(self,a, b):
+        # a es la cadena más larga. Si b es más larga que a intercambia a y b trabajando con la cadena más corta.
+        if len(a) < len(b):
+            return self.distancia_levenshtein(b, a)
+        
+        # si b está vacía, se toma la longitud de a
+        if len(b) == 0:
+            return len(a)
+        
+    # IMPORTANTE: LOS CARACTERES I Y J SON INDICES PARA ITERAR EN LAS CADENAS A Y B
+    # Se inicializa el algoritmo: previous_row es la lista de enteros qeu representa la distancia entre la cadena vacía y los primeros
+    # j caracteres de b. Esto genera [0,1,2,3]
+    
+        previous_row = range(len(b) + 1)
+        # se empieza a iterar en a donde i es el índice de la posicion de la cadena a y c1 es el caracter de la cadena a:
+        for i, c1 in enumerate(a):
+            # empieza con i + 1 porque calcula la distancia de la subcadena i+1 de a a una cadena vacía. Fila actual.
+            current_row = [i + 1]
+            # para j que es el índice de la posición actual de la cadena b y c2 que es el carácter actual de la cadena b se itera sobre b:
+            for j, c2 in enumerate(b):
+                # insertions es el número de operaciones necesarias para insertar un carácter en a para que coincida con b.
+                insertions = previous_row[j + 1] + 1
+                # deletions es el número de operaciones necesarias para eliminar un carácter de a para que coincida con b.
+                deletions = current_row[j] + 1
+                # substitutions es el número de operaciones necesarias para sustituir un caráceter en a para que coincida con b.
+                # c1 != c2 es 0 si los caracteres son iguales y 1 si son diferentes.                
+                substitutions = previous_row[j] + (c1 != c2)
+                # una vez realizadas las operaciones se añaden a current row (fila actual)
+                current_row.append(min(insertions, deletions, substitutions))
+            # al final de cada iteración sobre a, se actualiza current row para la próxima iteración.
+            previous_row = current_row
+        # es la distancia entre las dos cadenas.
+        return previous_row[-1]
+
+    # Función para comparar respuestas con tolerancia a errores ortográficos
+    def es_respuesta_correcta(self, umbral_similitud=0.8):
+        # normaliza texto eliminando tildes, convirtiendo a minúsculas y eliminando caracteres no alfabéticos
+        respuesta_usuario = self.respuesta_usuario_entry.get()
+        respuesta_usuario = self.normalizar_texto(respuesta_usuario)
+        # se determina la longitud de la cadena más larga entre la respuesta del usuario y la correcta
+        respuesta_correcta = self.diccionario[self.pregunta]
+        respuesta_correcta = self.normalizar_texto(respuesta_correcta)
+        # se calcula la distancia de Levenshtein entre las dos cadenas normalizadas. forma de convertir una cadena en otra.
+        longitud_maxima = max(len(respuesta_usuario), len(respuesta_correcta))
+        distancia = self.distancia_levenshtein(respuesta_usuario, respuesta_correcta)
+        # comparación la similitud de los caracteres entre dos cadenas y aplica las operaciones necesarias para convertir una cadena en otra
+        similitud = (longitud_maxima - distancia) / longitud_maxima
+        # se compara la similitud de la cadena con uno predefinido (por defecto de 0.8) y si la similitud es mayor o igual al umbral, la respuesta del usuario se considera correcta:
+        return similitud >= umbral_similitud
+        
+    def comprobacion_respuesta(self):
+        self.es_respuesta_correcta()
+        respuesta_usuario = self.respuesta_usuario_entry.get() 
+        print(respuesta_usuario)
+        
+        
+        if self.es_respuesta_correcta():
+            self.aciertos += 1
+            acierto_label = Label(self.ventana, text = f"¡Acertaste!, llevas {self.aciertos} respuestas correctas",font=("Helvética",20))
+            # etiqueta mostrando al jugador que ha acerdado
+            acierto_label.grid(row=4, column=0, padx= 60, pady=30,sticky="w")
+            self.seleccion_pregunta() # si acierta se ejecuta el metodo self.seleccion_pregunta () para mostrar una nueva pregunta
+            
+            if self.aciertos == 5: #Si llegamos a 5 respuestas correctas imprimimos has ganado
+                victoria_label = Label(self.ventana, text=f"¡HAS GANADO!",bg="white", fg="green", font=("Helvética", 60))
+                # etiqueta mostrando al jugador que ha ganado
+                victoria_label.grid(row=5,column=0, padx=60, pady=30, sticky="w")
+                messagebox.showinfo("¡Ganaste!", "Enhorabuena! Has ganado el juego!")
+                # ventana emergente mostrandole que ha ganado el juego
+                self.ventana.destroy() # despues de message box se cierra la ventana principal
+        else:
+            self.intentos -= 1 #Actualizamos el número de intentos restantes quitando 1
+
+            if self.intentos > 0: #Si aun nos quedan intentos
+                fallaste_label = Label(self.ventana, text=(f"¡Fallaste! ahora te quedan => {self.intentos} intentos   "),font=("Helvética",20))
+                # etiqueta mostrando que el jugador ha fallado
+                fallaste_label.grid(row=4,column=0,padx=60, pady=30,sticky="w")
+            else: 
+                self.fallos += 1
+                
+                if self.fallos == 3:
+                    derrota_label = Label(self.ventana, text=f"¡HAS PERDIDO!", bg="white", fg="red", font=("Helvética", 60))
+                    derrota_label.grid(row=4, column=0, padx=60, pady=30, sticky="w")
+                    # etiqueta mostrando que el jugador ha perdido
+                    messagebox.showinfo("¡Has perdido!", "vuelve a intentarlo")
+                    # ventana emergente mostrando que ha perdido y puede volver a intentarlo
+                    self.ventana.destroy() # despues de messagebox se cierra la ventana principal
+                    
+                    
+                else:
+                    fallos_label = Label(self.ventana, text = f"Ya no te quedan intentos, llevas {self.fallos} fallos",font=("Helvética",20))
+                    # etiqueta mostrando a jugador que ha agotado numero de intentos permitidos por preguntas y que acumula un nuevo fallo
+                    fallos_label.grid(row=4, column = 0, padx=60, pady=30,sticky="w")
+                    self.seleccion_pregunta() # cuando agota los intentos llamamos al metodo seleccion_pregunta mostrarle una pregunta nueva al jugador
+
+
+              
+
+
 
 
             
